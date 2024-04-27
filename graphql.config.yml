@@ -1,0 +1,5 @@
+schema: graph/schema.graphqls
+documents: '**/*.graphql'
+extensions:
+  endpoints:
+    dev: http://localhost:8080/query

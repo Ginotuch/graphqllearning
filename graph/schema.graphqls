@@ -1,0 +1,49 @@
+type Query {
+    reviews: [Review!]
+    review(id: ID!): Review
+    games: [Game!]
+    game(id: ID!): Game
+    seriesList: [Series!]
+    series(id: ID!): Series
+    authors: [Author!]
+    author(id: ID!): Author
+    platforms: [Platform!]
+    platform(id: ID!): Platform
+}
+
+type Series {
+    id: ID!
+    name: String!
+    games: [Game!]!
+}
+
+type Game {
+    id: ID!
+    series: Series
+    name: String!
+    platforms: [Platform!]
+    reviews: [Review!]
+}
+
+type Review {
+    id: ID!
+    title: String!
+    content: String!
+    rating: Int!
+    author: Author!
+    game: Game!
+}
+
+type Author {
+    id: ID!
+    name: String!
+    reviews: [Review!]
+}
+
+
+type Platform {
+    id: ID!
+    name: String!
+    company: String!
+    games: [Game!]
+}
