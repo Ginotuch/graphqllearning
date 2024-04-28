@@ -11,6 +11,45 @@ type Query {
     platform(id: ID!): Platform
 }
 
+type Mutation {
+    addPlatform(platform: PlatformInput!): Platform
+    addSeries(series: SeriesInput!): Series
+    addGame(game: GameInput!): Game
+    addAuthor(author: AuthorInput!): Author
+    addReview(review: ReviewInput!): Review
+}
+
+input PlatformInput {
+    id: ID
+    name: String
+    company: String
+}
+
+input SeriesInput {
+    id: ID
+    name: String
+}
+
+input GameInput {
+    id: ID
+    name: String
+    series: SeriesInput
+    platforms: [PlatformInput!]
+}
+
+input ReviewInput {
+    title: String!
+    content: String!
+    rating: Int!
+    author: AuthorInput!
+    game: GameInput!
+}
+
+input AuthorInput {
+    id: ID
+    name: String
+}
+
 type Series {
     id: ID!
     name: String!

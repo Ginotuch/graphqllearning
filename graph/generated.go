@@ -41,6 +41,7 @@ type Config struct {
 type ResolverRoot interface {
 	Author() AuthorResolver
 	Game() GameResolver
+	Mutation() MutationResolver
 	Platform() PlatformResolver
 	Query() QueryResolver
 	Review() ReviewResolver
@@ -63,6 +64,14 @@ type ComplexityRoot struct {
 		Platforms func(childComplexity int) int
 		Reviews   func(childComplexity int) int
 		Series    func(childComplexity int) int
+	}
+
+	Mutation struct {
+		AddAuthor   func(childComplexity int, author model.AuthorInput) int
+		AddGame     func(childComplexity int, game model.GameInput) int
+		AddPlatform func(childComplexity int, platform model.PlatformInput) int
+		AddReview   func(childComplexity int, review model.ReviewInput) int
+		AddSeries   func(childComplexity int, series model.SeriesInput) int
 	}
 
 	Platform struct {
@@ -109,6 +118,13 @@ type GameResolver interface {
 
 	Platforms(ctx context.Context, obj *model.Game) ([]*model.Platform, error)
 	Reviews(ctx context.Context, obj *model.Game) ([]*model.Review, error)
+}
+type MutationResolver interface {
+	AddPlatform(ctx context.Context, platform model.PlatformInput) (*model.Platform, error)
+	AddSeries(ctx context.Context, series model.SeriesInput) (*model.Series, error)
+	AddGame(ctx context.Context, game model.GameInput) (*model.Game, error)
+	AddAuthor(ctx context.Context, author model.AuthorInput) (*model.Author, error)
+	AddReview(ctx context.Context, review model.ReviewInput) (*model.Review, error)
 }
 type PlatformResolver interface {
 	Games(ctx context.Context, obj *model.Platform) ([]*model.Game, error)
@@ -207,6 +223,66 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Game.Series(childComplexity), true
+
+	case "Mutation.addAuthor":
+		if e.complexity.Mutation.AddAuthor == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_addAuthor_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.AddAuthor(childComplexity, args["author"].(model.AuthorInput)), true
+
+	case "Mutation.addGame":
+		if e.complexity.Mutation.AddGame == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_addGame_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.AddGame(childComplexity, args["game"].(model.GameInput)), true
+
+	case "Mutation.addPlatform":
+		if e.complexity.Mutation.AddPlatform == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_addPlatform_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.AddPlatform(childComplexity, args["platform"].(model.PlatformInput)), true
+
+	case "Mutation.addReview":
+		if e.complexity.Mutation.AddReview == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_addReview_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.AddReview(childComplexity, args["review"].(model.ReviewInput)), true
+
+	case "Mutation.addSeries":
+		if e.complexity.Mutation.AddSeries == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_addSeries_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.AddSeries(childComplexity, args["series"].(model.SeriesInput)), true
 
 	case "Platform.company":
 		if e.complexity.Platform.Company == nil {
@@ -401,7 +477,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	rc := graphql.GetOperationContext(ctx)
 	ec := executionContext{rc, e, 0, 0, make(chan graphql.DeferredResult)}
-	inputUnmarshalMap := graphql.BuildUnmarshalerMap()
+	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
+		ec.unmarshalInputAuthorInput,
+		ec.unmarshalInputGameInput,
+		ec.unmarshalInputPlatformInput,
+		ec.unmarshalInputReviewInput,
+		ec.unmarshalInputSeriesInput,
+	)
 	first := true
 
 	switch rc.Operation.Operation {
@@ -434,6 +516,21 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			}
 
 			return &response
+		}
+	case ast.Mutation:
+		return func(ctx context.Context) *graphql.Response {
+			if !first {
+				return nil
+			}
+			first = false
+			ctx = graphql.WithUnmarshalerMap(ctx, inputUnmarshalMap)
+			data := ec._Mutation(ctx, rc.Operation.SelectionSet)
+			var buf bytes.Buffer
+			data.MarshalGQL(&buf)
+
+			return &graphql.Response{
+				Data: buf.Bytes(),
+			}
 		}
 
 	default:
@@ -501,6 +598,81 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
+
+func (ec *executionContext) field_Mutation_addAuthor_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.AuthorInput
+	if tmp, ok := rawArgs["author"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("author"))
+		arg0, err = ec.unmarshalNAuthorInput2graphqllearningᚋgraphᚋmodelᚐAuthorInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["author"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_addGame_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.GameInput
+	if tmp, ok := rawArgs["game"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("game"))
+		arg0, err = ec.unmarshalNGameInput2graphqllearningᚋgraphᚋmodelᚐGameInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["game"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_addPlatform_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.PlatformInput
+	if tmp, ok := rawArgs["platform"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("platform"))
+		arg0, err = ec.unmarshalNPlatformInput2graphqllearningᚋgraphᚋmodelᚐPlatformInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["platform"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_addReview_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.ReviewInput
+	if tmp, ok := rawArgs["review"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("review"))
+		arg0, err = ec.unmarshalNReviewInput2graphqllearningᚋgraphᚋmodelᚐReviewInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["review"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_addSeries_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.SeriesInput
+	if tmp, ok := rawArgs["series"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("series"))
+		arg0, err = ec.unmarshalNSeriesInput2graphqllearningᚋgraphᚋmodelᚐSeriesInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["series"] = arg0
+	return args, nil
+}
 
 func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
@@ -1012,6 +1184,318 @@ func (ec *executionContext) fieldContext_Game_reviews(ctx context.Context, field
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Review", field.Name)
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_addPlatform(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_addPlatform(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().AddPlatform(rctx, fc.Args["platform"].(model.PlatformInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Platform)
+	fc.Result = res
+	return ec.marshalOPlatform2ᚖgraphqllearningᚋgraphᚋmodelᚐPlatform(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_addPlatform(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Platform_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Platform_name(ctx, field)
+			case "company":
+				return ec.fieldContext_Platform_company(ctx, field)
+			case "games":
+				return ec.fieldContext_Platform_games(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Platform", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_addPlatform_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_addSeries(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_addSeries(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().AddSeries(rctx, fc.Args["series"].(model.SeriesInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Series)
+	fc.Result = res
+	return ec.marshalOSeries2ᚖgraphqllearningᚋgraphᚋmodelᚐSeries(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_addSeries(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Series_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Series_name(ctx, field)
+			case "games":
+				return ec.fieldContext_Series_games(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Series", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_addSeries_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_addGame(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_addGame(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().AddGame(rctx, fc.Args["game"].(model.GameInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Game)
+	fc.Result = res
+	return ec.marshalOGame2ᚖgraphqllearningᚋgraphᚋmodelᚐGame(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_addGame(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Game_id(ctx, field)
+			case "series":
+				return ec.fieldContext_Game_series(ctx, field)
+			case "name":
+				return ec.fieldContext_Game_name(ctx, field)
+			case "platforms":
+				return ec.fieldContext_Game_platforms(ctx, field)
+			case "reviews":
+				return ec.fieldContext_Game_reviews(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Game", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_addGame_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_addAuthor(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_addAuthor(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().AddAuthor(rctx, fc.Args["author"].(model.AuthorInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Author)
+	fc.Result = res
+	return ec.marshalOAuthor2ᚖgraphqllearningᚋgraphᚋmodelᚐAuthor(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_addAuthor(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Author_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Author_name(ctx, field)
+			case "reviews":
+				return ec.fieldContext_Author_reviews(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Author", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_addAuthor_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_addReview(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_addReview(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().AddReview(rctx, fc.Args["review"].(model.ReviewInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Review)
+	fc.Result = res
+	return ec.marshalOReview2ᚖgraphqllearningᚋgraphᚋmodelᚐReview(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_addReview(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Review_id(ctx, field)
+			case "title":
+				return ec.fieldContext_Review_title(ctx, field)
+			case "content":
+				return ec.fieldContext_Review_content(ctx, field)
+			case "rating":
+				return ec.fieldContext_Review_rating(ctx, field)
+			case "author":
+				return ec.fieldContext_Review_author(ctx, field)
+			case "game":
+				return ec.fieldContext_Review_game(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Review", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_addReview_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -4100,6 +4584,218 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(ctx context.Conte
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputAuthorInput(ctx context.Context, obj interface{}) (model.AuthorInput, error) {
+	var it model.AuthorInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "name"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ID = data
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputGameInput(ctx context.Context, obj interface{}) (model.GameInput, error) {
+	var it model.GameInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "name", "series", "platforms"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ID = data
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "series":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("series"))
+			data, err := ec.unmarshalOSeriesInput2ᚖgraphqllearningᚋgraphᚋmodelᚐSeriesInput(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Series = data
+		case "platforms":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("platforms"))
+			data, err := ec.unmarshalOPlatformInput2ᚕᚖgraphqllearningᚋgraphᚋmodelᚐPlatformInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Platforms = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputPlatformInput(ctx context.Context, obj interface{}) (model.PlatformInput, error) {
+	var it model.PlatformInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "name", "company"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ID = data
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "company":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("company"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Company = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputReviewInput(ctx context.Context, obj interface{}) (model.ReviewInput, error) {
+	var it model.ReviewInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"title", "content", "rating", "author", "game"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "title":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("title"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Title = data
+		case "content":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("content"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Content = data
+		case "rating":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("rating"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Rating = data
+		case "author":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("author"))
+			data, err := ec.unmarshalNAuthorInput2ᚖgraphqllearningᚋgraphᚋmodelᚐAuthorInput(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Author = data
+		case "game":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("game"))
+			data, err := ec.unmarshalNGameInput2ᚖgraphqllearningᚋgraphᚋmodelᚐGameInput(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Game = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputSeriesInput(ctx context.Context, obj interface{}) (model.SeriesInput, error) {
+	var it model.SeriesInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "name"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ID = data
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		}
+	}
+
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -4305,6 +5001,68 @@ func (ec *executionContext) _Game(ctx context.Context, sel ast.SelectionSet, obj
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var mutationImplementors = []string{"Mutation"}
+
+func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, mutationImplementors)
+	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
+		Object: "Mutation",
+	})
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		innerCtx := graphql.WithRootFieldContext(ctx, &graphql.RootFieldContext{
+			Object: field.Name,
+			Field:  field,
+		})
+
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Mutation")
+		case "addPlatform":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_addPlatform(ctx, field)
+			})
+		case "addSeries":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_addSeries(ctx, field)
+			})
+		case "addGame":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_addGame(ctx, field)
+			})
+		case "addAuthor":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_addAuthor(ctx, field)
+			})
+		case "addReview":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_addReview(ctx, field)
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -5196,6 +5954,16 @@ func (ec *executionContext) marshalNAuthor2ᚖgraphqllearningᚋgraphᚋmodelᚐ
 	return ec._Author(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNAuthorInput2graphqllearningᚋgraphᚋmodelᚐAuthorInput(ctx context.Context, v interface{}) (model.AuthorInput, error) {
+	res, err := ec.unmarshalInputAuthorInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNAuthorInput2ᚖgraphqllearningᚋgraphᚋmodelᚐAuthorInput(ctx context.Context, v interface{}) (*model.AuthorInput, error) {
+	res, err := ec.unmarshalInputAuthorInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -5269,6 +6037,16 @@ func (ec *executionContext) marshalNGame2ᚖgraphqllearningᚋgraphᚋmodelᚐGa
 	return ec._Game(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNGameInput2graphqllearningᚋgraphᚋmodelᚐGameInput(ctx context.Context, v interface{}) (model.GameInput, error) {
+	res, err := ec.unmarshalInputGameInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNGameInput2ᚖgraphqllearningᚋgraphᚋmodelᚐGameInput(ctx context.Context, v interface{}) (*model.GameInput, error) {
+	res, err := ec.unmarshalInputGameInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v interface{}) (string, error) {
 	res, err := graphql.UnmarshalID(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -5309,6 +6087,16 @@ func (ec *executionContext) marshalNPlatform2ᚖgraphqllearningᚋgraphᚋmodel�
 	return ec._Platform(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNPlatformInput2graphqllearningᚋgraphᚋmodelᚐPlatformInput(ctx context.Context, v interface{}) (model.PlatformInput, error) {
+	res, err := ec.unmarshalInputPlatformInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNPlatformInput2ᚖgraphqllearningᚋgraphᚋmodelᚐPlatformInput(ctx context.Context, v interface{}) (*model.PlatformInput, error) {
+	res, err := ec.unmarshalInputPlatformInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNReview2ᚖgraphqllearningᚋgraphᚋmodelᚐReview(ctx context.Context, sel ast.SelectionSet, v *model.Review) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -5319,6 +6107,11 @@ func (ec *executionContext) marshalNReview2ᚖgraphqllearningᚋgraphᚋmodelᚐ
 	return ec._Review(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNReviewInput2graphqllearningᚋgraphᚋmodelᚐReviewInput(ctx context.Context, v interface{}) (model.ReviewInput, error) {
+	res, err := ec.unmarshalInputReviewInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNSeries2ᚖgraphqllearningᚋgraphᚋmodelᚐSeries(ctx context.Context, sel ast.SelectionSet, v *model.Series) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -5327,6 +6120,11 @@ func (ec *executionContext) marshalNSeries2ᚖgraphqllearningᚋgraphᚋmodelᚐ
 		return graphql.Null
 	}
 	return ec._Series(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNSeriesInput2graphqllearningᚋgraphᚋmodelᚐSeriesInput(ctx context.Context, v interface{}) (model.SeriesInput, error) {
+	res, err := ec.unmarshalInputSeriesInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
@@ -5731,6 +6529,22 @@ func (ec *executionContext) marshalOGame2ᚖgraphqllearningᚋgraphᚋmodelᚐGa
 	return ec._Game(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalOID2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalID(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOID2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	res := graphql.MarshalID(*v)
+	return res
+}
+
 func (ec *executionContext) marshalOPlatform2ᚕᚖgraphqllearningᚋgraphᚋmodelᚐPlatformᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Platform) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -5783,6 +6597,26 @@ func (ec *executionContext) marshalOPlatform2ᚖgraphqllearningᚋgraphᚋmodel�
 		return graphql.Null
 	}
 	return ec._Platform(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOPlatformInput2ᚕᚖgraphqllearningᚋgraphᚋmodelᚐPlatformInputᚄ(ctx context.Context, v interface{}) ([]*model.PlatformInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]*model.PlatformInput, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNPlatformInput2ᚖgraphqllearningᚋgraphᚋmodelᚐPlatformInput(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
 }
 
 func (ec *executionContext) marshalOReview2ᚕᚖgraphqllearningᚋgraphᚋmodelᚐReviewᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Review) graphql.Marshaler {
@@ -5891,6 +6725,14 @@ func (ec *executionContext) marshalOSeries2ᚖgraphqllearningᚋgraphᚋmodelᚐ
 		return graphql.Null
 	}
 	return ec._Series(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOSeriesInput2ᚖgraphqllearningᚋgraphᚋmodelᚐSeriesInput(ctx context.Context, v interface{}) (*model.SeriesInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputSeriesInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v interface{}) (*string, error) {

@@ -8,6 +8,11 @@ type Author struct {
 	Reviews []*Review `json:"reviews,omitempty"`
 }
 
+type AuthorInput struct {
+	ID   *string `json:"id,omitempty"`
+	Name *string `json:"name,omitempty"`
+}
+
 type Game struct {
 	ID        string      `json:"id"`
 	Series    *Series     `json:"series,omitempty"`
@@ -16,11 +21,27 @@ type Game struct {
 	Reviews   []*Review   `json:"reviews,omitempty"`
 }
 
+type GameInput struct {
+	ID        *string          `json:"id,omitempty"`
+	Name      *string          `json:"name,omitempty"`
+	Series    *SeriesInput     `json:"series,omitempty"`
+	Platforms []*PlatformInput `json:"platforms,omitempty"`
+}
+
+type Mutation struct {
+}
+
 type Platform struct {
 	ID      string  `json:"id"`
 	Name    string  `json:"name"`
 	Company string  `json:"company"`
 	Games   []*Game `json:"games,omitempty"`
+}
+
+type PlatformInput struct {
+	ID      *string `json:"id,omitempty"`
+	Name    *string `json:"name,omitempty"`
+	Company *string `json:"company,omitempty"`
 }
 
 type Query struct {
@@ -35,8 +56,21 @@ type Review struct {
 	Game    *Game   `json:"game"`
 }
 
+type ReviewInput struct {
+	Title   string       `json:"title"`
+	Content string       `json:"content"`
+	Rating  int          `json:"rating"`
+	Author  *AuthorInput `json:"author"`
+	Game    *GameInput   `json:"game"`
+}
+
 type Series struct {
 	ID    string  `json:"id"`
 	Name  string  `json:"name"`
 	Games []*Game `json:"games"`
+}
+
+type SeriesInput struct {
+	ID   *string `json:"id,omitempty"`
+	Name *string `json:"name,omitempty"`
 }

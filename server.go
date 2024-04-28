@@ -18,57 +18,43 @@ func main() {
 		port = defaultPort
 	}
 
-	games := map[string]storage.Game{
-		"1": {ID: "1", SeriesID: "1", Name: "Super Mario Bros", PlatformIDs: []string{"1", "2"}},
-		"2": {ID: "2", SeriesID: "1", Name: "Super Mario Bros 2", PlatformIDs: []string{"1", "2"}},
-		"3": {ID: "3", SeriesID: "2", Name: "The Legend of Zelda", PlatformIDs: []string{"1"}},
-		"4": {ID: "4", SeriesID: "2", Name: "The Legend of Zelda: Breath of the Wild", PlatformIDs: []string{"3"}},
-		"5": {ID: "5", Name: "Minecraft", PlatformIDs: []string{"1", "2", "3"}},
-	}
+	db := storage.NewInMemoryDatabase()
 
-	series := map[string]storage.Series{
-		"1": {ID: "1", Name: "Super Mario"},
-		"2": {ID: "2", Name: "The Legend of Zelda"},
-	}
+	// Add authors
+	author1 := db.AddAuthor("John Doe")
+	author2 := db.AddAuthor("Jane Doe")
+	author3 := db.AddAuthor("Bob Smith")
+	author4 := db.AddAuthor("Alice Smith")
+	author5 := db.AddAuthor("Charlie Brown")
 
-	reviews := map[string]storage.Review{
-		"1":  {ID: "1", Title: "Great game", Content: "Lorem ipsum", Rating: 5, AuthorID: "1", GameID: "1"},
-		"2":  {ID: "2", Title: "Awesome game", Content: "Lorem ipsum", Rating: 4, AuthorID: "2", GameID: "1"},
-		"3":  {ID: "3", Title: "Fantastic game", Content: "Lorem ipsum", Rating: 5, AuthorID: "3", GameID: "2"},
-		"4":  {ID: "4", Title: "Good game", Content: "Lorem ipsum", Rating: 4, AuthorID: "4", GameID: "2"},
-		"5":  {ID: "5", Title: "Amazing game", Content: "Lorem ipsum", Rating: 5, AuthorID: "5", GameID: "3"},
-		"6":  {ID: "6", Title: "Excellent game", Content: "Lorem ipsum", Rating: 5, AuthorID: "1", GameID: "3"},
-		"7":  {ID: "7", Title: "Superb game", Content: "Lorem ipsum", Rating: 5, AuthorID: "2", GameID: "4"},
-		"8":  {ID: "8", Title: "Wonderful game", Content: "Lorem ipsum", Rating: 5, AuthorID: "3", GameID: "4"},
-		"9":  {ID: "9", Title: "Incredible game", Content: "Lorem ipsum", Rating: 5, AuthorID: "4", GameID: "5"},
-		"10": {ID: "10", Title: "Unbelievable game", Content: "Lorem ipsum", Rating: 5, AuthorID: "5", GameID: "5"},
-	}
+	// Add platforms
+	platform1 := db.AddPlatform("Nintendo Entertainment System", "Nintendo")
+	platform2 := db.AddPlatform("Super Nintendo Entertainment System", "Nintendo")
+	platform3 := db.AddPlatform("Nintendo Switch", "Nintendo")
 
-	authors := map[string]storage.Author{
-		"1": {ID: "1", Name: "John Doe"},
-		"2": {ID: "2", Name: "Jane Doe"},
-		"3": {ID: "3", Name: "Bob Smith"},
-		"4": {ID: "4", Name: "Alice Smith"},
-		"5": {ID: "5", Name: "Charlie Brown"},
-		"6": {ID: "6", Name: "Lucy Van Pelt"},
-	}
+	// Add series
+	series1 := db.AddSeries("Super Mario")
+	series2 := db.AddSeries("The Legend of Zelda")
 
-	platforms := map[string]storage.Platform{
-		"1": {ID: "1", Name: "Nintendo Entertainment System", Company: "Nintendo"},
-		"2": {ID: "2", Name: "Super Nintendo Entertainment System", Company: "Nintendo"},
-		"3": {ID: "3", Name: "Nintendo Switch", Company: "Nintendo"},
-	}
+	// Add games
+	game1, _ := db.AddGame("Super Mario Bros", &series1.ID, []string{platform1.ID, platform2.ID})
+	game2, _ := db.AddGame("Super Mario Bros 2", &series1.ID, []string{platform1.ID, platform2.ID})
+	game3, _ := db.AddGame("The Legend of Zelda", &series2.ID, []string{platform1.ID})
+	game4, _ := db.AddGame("The Legend of Zelda: Breath of the Wild", &series2.ID, []string{platform3.ID})
+	game5, _ := db.AddGame("Minecraft", nil, []string{platform1.ID, platform2.ID, platform3.ID})
 
-	db, err := storage.NewInMemoryDatabase(
-		storage.WithGames(games),
-		storage.WithSeries(series),
-		storage.WithReviews(reviews),
-		storage.WithAuthors(authors),
-		storage.WithPlatforms(platforms),
-	)
-	if err != nil {
-		panic(err)
-	}
+	// Add reviews
+	_, _ = db.AddReview("Great game", "Lorem ipsum", 5, author1.ID, game1.ID)
+	_, _ = db.AddReview("Awesome game", "Lorem ipsum", 4, author2.ID, game1.ID)
+	_, _ = db.AddReview("Fantastic game", "Lorem ipsum", 5, author3.ID, game2.ID)
+	_, _ = db.AddReview("Good game", "Lorem ipsum", 4, author4.ID, game2.ID)
+	_, _ = db.AddReview("Amazing game", "Lorem ipsum", 5, author5.ID, game3.ID)
+	_, _ = db.AddReview("Excellent game", "Lorem ipsum", 5, author1.ID, game3.ID)
+	_, _ = db.AddReview("Superb game", "Lorem ipsum", 5, author2.ID, game4.ID)
+	_, _ = db.AddReview("Wonderful game", "Lorem ipsum", 5, author3.ID, game4.ID)
+	_, _ = db.AddReview("Incredible game", "Lorem ipsum", 5, author4.ID, game5.ID)
+	_, _ = db.AddReview("Unbelievable game", "Lorem ipsum", 5, author5.ID, game5.ID)
+
 	resolver := graph.NewResolver(db)
 	config := graph.Config{Resolvers: resolver}
 	executableSchema := graph.NewExecutableSchema(config)

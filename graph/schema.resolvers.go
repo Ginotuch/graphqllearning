@@ -6,11 +6,12 @@ package graph
 
 import (
 	"context"
+	"fmt"
 	"graphqllearning/graph/model"
 )
 
 // Reviews is the resolver for the reviews field.
-func (r *authorResolver) Reviews(_ context.Context, obj *model.Author) ([]*model.Review, error) {
+func (r *authorResolver) Reviews(ctx context.Context, obj *model.Author) ([]*model.Review, error) {
 	var reviews []*model.Review
 	for _, review := range r.database.Reviews() {
 		if review.AuthorID == obj.ID {
@@ -21,15 +22,15 @@ func (r *authorResolver) Reviews(_ context.Context, obj *model.Author) ([]*model
 }
 
 // Series is the resolver for the series field.
-func (r *gameResolver) Series(_ context.Context, obj *model.Game) (*model.Series, error) {
+func (r *gameResolver) Series(ctx context.Context, obj *model.Game) (*model.Series, error) {
 	game, err := r.database.Game(obj.ID)
 	if err != nil {
 		return nil, err
 	}
-	if game.SeriesID == "" {
+	if game.SeriesID == nil {
 		return nil, nil
 	}
-	series, err := r.database.Series(game.SeriesID)
+	series, err := r.database.Series(*game.SeriesID)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +38,7 @@ func (r *gameResolver) Series(_ context.Context, obj *model.Game) (*model.Series
 }
 
 // Platforms is the resolver for the platforms field.
-func (r *gameResolver) Platforms(_ context.Context, obj *model.Game) ([]*model.Platform, error) {
+func (r *gameResolver) Platforms(ctx context.Context, obj *model.Game) ([]*model.Platform, error) {
 	game, err := r.database.Game(obj.ID)
 	if err != nil {
 		return nil, err
@@ -56,7 +57,7 @@ func (r *gameResolver) Platforms(_ context.Context, obj *model.Game) ([]*model.P
 }
 
 // Reviews is the resolver for the reviews field.
-func (r *gameResolver) Reviews(_ context.Context, obj *model.Game) ([]*model.Review, error) {
+func (r *gameResolver) Reviews(ctx context.Context, obj *model.Game) ([]*model.Review, error) {
 	var reviews []*model.Review
 	for _, review := range r.database.Reviews() {
 		if review.GameID == obj.ID {
@@ -66,8 +67,131 @@ func (r *gameResolver) Reviews(_ context.Context, obj *model.Game) ([]*model.Rev
 	return reviews, nil
 }
 
+// AddPlatform is the resolver for the addPlatform field.
+func (r *mutationResolver) AddPlatform(ctx context.Context, platform model.PlatformInput) (*model.Platform, error) {
+	if platform.ID != nil {
+		if foundPlatform, err := r.database.Platform(*platform.ID); err == nil && foundPlatform.Name == *platform.Name && foundPlatform.Company == *platform.Company {
+			return foundPlatform.ToGraphModel(), nil
+		}
+		if platform.Name != nil || platform.Company != nil {
+			return nil, fmt.Errorf("cannot specify an ID while also specifying the Name or Company when creating a new platform")
+		}
+		foundPlatform, err := r.database.Platform(*platform.ID)
+		if err != nil {
+			return nil, err
+		}
+		return foundPlatform.ToGraphModel(), nil
+	}
+
+	if platform.Name == nil || platform.Company == nil {
+		return nil, fmt.Errorf("platform name and company cannot be nil")
+	}
+
+	return r.database.AddPlatform(*platform.Name, *platform.Company).ToGraphModel(), nil
+}
+
+// AddSeries is the resolver for the addSeries field.
+func (r *mutationResolver) AddSeries(ctx context.Context, series model.SeriesInput) (*model.Series, error) {
+	if series.ID != nil {
+		if series.Name != nil {
+			//return nil,
+		}
+	}
+	if series.Name == nil {
+		return nil, fmt.Errorf("series name cannot be nil")
+	}
+	return r.database.AddSeries(*series.Name).ToGraphModel(), nil
+}
+
+// AddGame is the resolver for the addGame field.
+func (r *mutationResolver) AddGame(ctx context.Context, game model.GameInput) (*model.Game, error) {
+	if game.ID != nil {
+		return nil, fmt.Errorf("cannot create new game with ID specified")
+	}
+
+	var seriesId *string
+
+	if game.Series != nil {
+		// A series has been specified, so either find it or create it
+		if game.Series.ID != nil && game.Series.Name != nil {
+			return nil, fmt.Errorf("cannot supply both series ID and name for creation")
+		}
+
+		if game.Series.ID != nil {
+			// An ID was specified, first try to find it to use the existing one, otherwise error
+			foundSeries, err := r.database.Game(*game.Series.ID)
+			if err != nil {
+				return nil, err
+			}
+			seriesId = foundSeries.SeriesID
+		} else {
+			// No ID was specified, only the Name. So, create a new Series and use its ID
+			createdSeriesId := r.database.AddSeries(*game.Series.Name).ID
+			seriesId = &createdSeriesId
+		}
+	}
+
+	var platformIDs []string
+	for _, platformInput := range game.Platforms {
+		var platformID string
+
+		if platformInput.ID != nil && (platformInput.Name != nil || platformInput.Company != nil) {
+			return nil, fmt.Errorf("cannot supply both platform ID and name or company name")
+		}
+
+		if platformInput.ID != nil {
+			// ID supplied, check if it exists otherwise error
+			_, err := r.database.Platform(*platformInput.ID)
+			if err != nil {
+				return nil, err
+			}
+			platformID = *platformInput.ID
+		} else {
+			if platformInput.Name == nil && platformInput.Company == nil {
+				return nil, fmt.Errorf("platform name and company must both be not nil")
+			}
+			platformID = r.database.AddPlatform(*platformInput.Name, *platformInput.Company).ID
+		}
+
+		platformIDs = append(platformIDs, platformID)
+	}
+
+	newGame, err := r.database.AddGame(*game.Name, seriesId, platformIDs)
+	if err != nil {
+		return nil, err
+	}
+	return newGame.ToGraphModel(), nil
+
+}
+
+// AddAuthor is the resolver for the addAuthor field.
+func (r *mutationResolver) AddAuthor(ctx context.Context, author model.AuthorInput) (*model.Author, error) {
+	if author.ID != nil {
+		return nil, fmt.Errorf("cannot create new Author with ID specified")
+	}
+
+	return r.database.AddAuthor(*author.Name).ToGraphModel(), nil
+}
+
+// AddReview is the resolver for the addReview field.
+func (r *mutationResolver) AddReview(ctx context.Context, review model.ReviewInput) (*model.Review, error) {
+	author, err := r.AddAuthor(ctx, *review.Author)
+	if err != nil {
+		return nil, err
+	}
+	game, err := r.AddGame(ctx, *review.Game)
+	if err != nil {
+		return nil, err
+	}
+	newReview, err := r.database.AddReview(review.Title, review.Content, review.Rating, author.ID, game.ID)
+	if err != nil {
+		return nil, err
+	}
+	return newReview.ToGraphModel(), nil
+}
+
 // Games is the resolver for the games field.
-func (r *platformResolver) Games(_ context.Context, obj *model.Platform) ([]*model.Game, error) {
+func (r *platformResolver) Games(ctx context.Context, obj *model.Platform) ([]*model.Game, error) {
 	var games []*model.Game
 	for _, game := range r.database.Games() {
 		for _, platformID := range game.PlatformIDs {
@@ -80,7 +204,7 @@ func (r *platformResolver) Games(_ context.Context, obj *model.Platform) ([]*mod
 }
 
 // Reviews is the resolver for the reviews field.
-func (r *queryResolver) Reviews(_ context.Context) ([]*model.Review, error) {
+func (r *queryResolver) Reviews(ctx context.Context) ([]*model.Review, error) {
 	var reviews []*model.Review
 	for _, review := range r.database.Reviews() {
 		reviews = append(reviews, review.ToGraphModel())
@@ -89,7 +213,7 @@ func (r *queryResolver) Reviews(_ context.Context) ([]*model.Review, error) {
 }
 
 // Review is the resolver for the review field.
-func (r *queryResolver) Review(_ context.Context, id string) (*model.Review, error) {
+func (r *queryResolver) Review(ctx context.Context, id string) (*model.Review, error) {
 	review, err := r.database.Review(id)
 	if err != nil {
 		return nil, err
@@ -98,7 +222,7 @@ func (r *queryResolver) Review(_ context.Context, id string) (*model.Review, err
 }
 
 // Games is the resolver for the games field.
-func (r *queryResolver) Games(_ context.Context) ([]*model.Game, error) {
+func (r *queryResolver) Games(ctx context.Context) ([]*model.Game, error) {
 	var games []*model.Game
 	for _, game := range r.database.Games() {
 		games = append(games, game.ToGraphModel())
@@ -107,7 +231,7 @@ func (r *queryResolver) Games(_ context.Context) ([]*model.Game, error) {
 }
 
 // Game is the resolver for the game field.
-func (r *queryResolver) Game(_ context.Context, id string) (*model.Game, error) {
+func (r *queryResolver) Game(ctx context.Context, id string) (*model.Game, error) {
 	game, err := r.database.Game(id)
 	if err != nil {
 		return nil, err
@@ -116,7 +240,7 @@ func (r *queryResolver) Game(_ context.Context, id string) (*model.Game, error) 
 }
 
 // SeriesList is the resolver for the seriesList field.
-func (r *queryResolver) SeriesList(_ context.Context) ([]*model.Series, error) {
+func (r *queryResolver) SeriesList(ctx context.Context) ([]*model.Series, error) {
 	var seriesList []*model.Series
 	for _, series := range r.database.SeriesList() {
 		seriesList = append(seriesList, series.ToGraphModel())
@@ -125,7 +249,7 @@ func (r *queryResolver) SeriesList(_ context.Context) ([]*model.Series, error) {
 }
 
 // Series is the resolver for the series field.
-func (r *queryResolver) Series(_ context.Context, id string) (*model.Series, error) {
+func (r *queryResolver) Series(ctx context.Context, id string) (*model.Series, error) {
 	series, err := r.database.Series(id)
 	if err != nil {
 		return nil, err
@@ -134,7 +258,7 @@ func (r *queryResolver) Series(_ context.Context, id string) (*model.Series, err
 }
 
 // Authors is the resolver for the authors field.
-func (r *queryResolver) Authors(_ context.Context) ([]*model.Author, error) {
+func (r *queryResolver) Authors(ctx context.Context) ([]*model.Author, error) {
 	var authors []*model.Author
 	for _, author := range r.database.Authors() {
 		authors = append(authors, author.ToGraphModel())
@@ -143,7 +267,7 @@ func (r *queryResolver) Authors(_ context.Context) ([]*model.Author, error) {
 }
 
 // Author is the resolver for the author field.
-func (r *queryResolver) Author(_ context.Context, id string) (*model.Author, error) {
+func (r *queryResolver) Author(ctx context.Context, id string) (*model.Author, error) {
 	author, err := r.database.Author(id)
 	if err != nil {
 		return nil, err
@@ -152,7 +276,7 @@ func (r *queryResolver) Author(_ context.Context, id string) (*model.Author, err
 }
 
 // Platforms is the resolver for the platforms field.
-func (r *queryResolver) Platforms(_ context.Context) ([]*model.Platform, error) {
+func (r *queryResolver) Platforms(ctx context.Context) ([]*model.Platform, error) {
 	var platforms []*model.Platform
 	for _, platform := range r.database.Platforms() {
 		platforms = append(platforms, platform.ToGraphModel())
@@ -161,7 +285,7 @@ func (r *queryResolver) Platforms(_ context.Context) ([]*model.Platform, error) 
 }
 
 // Platform is the resolver for the platform field.
-func (r *queryResolver) Platform(_ context.Context, id string) (*model.Platform, error) {
+func (r *queryResolver) Platform(ctx context.Context, id string) (*model.Platform, error) {
 	platform, err := r.database.Platform(id)
 	if err != nil {
 		return nil, err
@@ -170,7 +294,7 @@ func (r *queryResolver) Platform(_ context.Context, id string) (*model.Platform,
 }
 
 // Author is the resolver for the author field.
-func (r *reviewResolver) Author(_ context.Context, obj *model.Review) (*model.Author, error) {
+func (r *reviewResolver) Author(ctx context.Context, obj *model.Review) (*model.Author, error) {
 	review, err := r.database.Review(obj.ID)
 	if err != nil {
 		return nil, err
@@ -183,7 +307,7 @@ func (r *reviewResolver) Author(_ context.Context, obj *model.Review) (*model.Au
 }
 
 // Game is the resolver for the game field.
-func (r *reviewResolver) Game(_ context.Context, obj *model.Review) (*model.Game, error) {
+func (r *reviewResolver) Game(ctx context.Context, obj *model.Review) (*model.Game, error) {
 	review, err := r.database.Review(obj.ID)
 	if err != nil {
 		return nil, err
@@ -193,14 +317,13 @@ func (r *reviewResolver) Game(_ context.Context, obj *model.Review) (*model.Game
 		return nil, err
 	}
 	return game.ToGraphModel(), nil
-
 }
 
 // Games is the resolver for the games field.
-func (r *seriesResolver) Games(_ context.Context, obj *model.Series) ([]*model.Game, error) {
+func (r *seriesResolver) Games(ctx context.Context, obj *model.Series) ([]*model.Game, error) {
 	var games []*model.Game
 	for _, game := range r.database.Games() {
-		if game.SeriesID == obj.ID {
+		if *game.SeriesID == obj.ID {
 			games = append(games, game.ToGraphModel())
 		}
 	}
@@ -212,6 +335,9 @@ func (r *Resolver) Author() AuthorResolver { return &authorResolver{r} }
 
 // Game returns GameResolver implementation.
 func (r *Resolver) Game() GameResolver { return &gameResolver{r} }
+
+// Mutation returns MutationResolver implementation.
+func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
 // Platform returns PlatformResolver implementation.
 func (r *Resolver) Platform() PlatformResolver { return &platformResolver{r} }
@@ -227,6 +353,7 @@ func (r *Resolver) Series() SeriesResolver { return &seriesResolver{r} }
 
 type authorResolver struct{ *Resolver }
 type gameResolver struct{ *Resolver }
+type mutationResolver struct{ *Resolver }
 type platformResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type reviewResolver struct{ *Resolver }

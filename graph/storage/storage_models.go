@@ -9,7 +9,7 @@ type Author struct {
 
 type Game struct {
 	ID          string   `json:"id"`
-	SeriesID    string   `json:"seriesID"`
+	SeriesID    *string  `json:"seriesID"`
 	Name        string   `json:"name"`
 	PlatformIDs []string `json:"platformIDs"`
 }
