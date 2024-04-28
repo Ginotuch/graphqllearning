@@ -10,7 +10,7 @@ import (
 type InMemoryDatabase struct {
 	currentID atomic.Uint64
 
-	mu sync.Mutex
+	mu sync.RWMutex
 
 	games     map[string]Game
 	series    map[string]Series
@@ -109,8 +109,8 @@ func (i *InMemoryDatabase) AddPlatform(name string, company string) Platform {
 }
 
 func (i *InMemoryDatabase) Games() []Game {
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	i.mu.RLock()
+	defer i.mu.RUnlock()
 
 	var games []Game
 	for _, game := range i.games {
@@ -120,8 +120,8 @@ func (i *InMemoryDatabase) Games() []Game {
 }
 
 func (i *InMemoryDatabase) SeriesList() []Series {
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	i.mu.RLock()
+	defer i.mu.RUnlock()
 
 	var seriesList []Series
 	for _, series := range i.series {
@@ -131,8 +131,8 @@ func (i *InMemoryDatabase) SeriesList() []Series {
 }
 
 func (i *InMemoryDatabase) Reviews() []Review {
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	i.mu.RLock()
+	defer i.mu.RUnlock()
 
 	var reviews []Review
 	for _, review := range i.reviews {
@@ -142,8 +142,8 @@ func (i *InMemoryDatabase) Reviews() []Review {
 }
 
 func (i *InMemoryDatabase) Authors() []Author {
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	i.mu.RLock()
+	defer i.mu.RUnlock()
 
 	var authors []Author
 	for _, author := range i.authors {
@@ -153,8 +153,8 @@ func (i *InMemoryDatabase) Authors() []Author {
 }
 
 func (i *InMemoryDatabase) Platforms() []Platform {
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	i.mu.RLock()
+	defer i.mu.RUnlock()
 
 	var platforms []Platform
 	for _, platform := range i.platforms {
@@ -164,8 +164,8 @@ func (i *InMemoryDatabase) Platforms() []Platform {
 }
 
 func (i *InMemoryDatabase) Game(id string) (*Game, error) {
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	i.mu.RLock()
+	defer i.mu.RUnlock()
 
 	game, exists := i.games[id]
 	if !exists {
@@ -175,8 +175,8 @@ func (i *InMemoryDatabase) Game(id string) (*Game, error) {
 }
 
 func (i *InMemoryDatabase) Series(id string) (*Series, error) {
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	i.mu.RLock()
+	defer i.mu.RUnlock()
 
 	series, exists := i.series[id]
 	if !exists {
@@ -186,8 +186,8 @@ func (i *InMemoryDatabase) Series(id string) (*Series, error) {
 }
 
 func (i *InMemoryDatabase) Review(id string) (*Review, error) {
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	i.mu.RLock()
+	defer i.mu.RUnlock()
 
 	review, exists := i.reviews[id]
 	if !exists {
@@ -197,8 +197,8 @@ func (i *InMemoryDatabase) Review(id string) (*Review, error) {
 }
 
 func (i *InMemoryDatabase) Author(id string) (*Author, error) {
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	i.mu.RLock()
+	defer i.mu.RUnlock()
 
 	author, exists := i.authors[id]
 	if !exists {
@@ -208,8 +208,8 @@ func (i *InMemoryDatabase) Author(id string) (*Author, error) {
 }
 
 func (i *InMemoryDatabase) Platform(id string) (*Platform, error) {
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	i.mu.RLock()
+	defer i.mu.RUnlock()
 
 	platform, exists := i.platforms[id]
 	if !exists {

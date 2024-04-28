@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"graphqllearning/graph/model"
+	"sync"
 )
 
 // Reviews is the resolver for the reviews field.
@@ -69,10 +70,14 @@ func (r *gameResolver) Reviews(ctx context.Context, obj *model.Game) ([]*model.R
 
 // AddPlatform is the resolver for the addPlatform field.
 func (r *mutationResolver) AddPlatform(ctx context.Context, platform model.PlatformInput) (*model.Platform, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	return r.addPlatform(ctx, platform)
+}
+
+func (r *mutationResolver) addPlatform(ctx context.Context, platform model.PlatformInput) (*model.Platform, error) {
 	if platform.ID != nil {
-		if foundPlatform, err := r.database.Platform(*platform.ID); err == nil && foundPlatform.Name == *platform.Name && foundPlatform.Company == *platform.Company {
-			return foundPlatform.ToGraphModel(), nil
-		}
 		if platform.Name != nil || platform.Company != nil {
 			return nil, fmt.Errorf("cannot specify an ID while also specifying the Name or Company when creating a new platform")
 		}
@@ -92,6 +97,13 @@ func (r *mutationResolver) AddPlatform(ctx context.Context, platform model.Platf
 
 // AddSeries is the resolver for the addSeries field.
 func (r *mutationResolver) AddSeries(ctx context.Context, series model.SeriesInput) (*model.Series, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	return r.addSeries(ctx, series)
+}
+
+func (r *mutationResolver) addSeries(ctx context.Context, series model.SeriesInput) (*model.Series, error) {
 	if series.ID != nil && series.Name != nil {
 		return nil, fmt.Errorf("cannot supply both series ID and name for creation")
 	}
@@ -107,19 +119,32 @@ func (r *mutationResolver) AddSeries(ctx context.Context, series model.SeriesInp
 
 	// No ID was specified, only the Name. So, create a new Series
 	return r.database.AddSeries(*series.Name).ToGraphModel(), nil
-
 }
 
 // AddGame is the resolver for the addGame field.
 func (r *mutationResolver) AddGame(ctx context.Context, game model.GameInput) (*model.Game, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	return r.addGame(ctx, game)
+}
+
+func (r *mutationResolver) addGame(ctx context.Context, game model.GameInput) (*model.Game, error) {
 	if game.ID != nil {
-		return nil, fmt.Errorf("cannot create new game with ID specified")
+		if game.Name != nil || game.Series != nil || len(game.Platforms) != 0 {
+			return nil, fmt.Errorf("cannot create new game with ID and other details specified together")
+		}
+		foundGame, err := r.database.Game(*game.ID)
+		if err != nil {
+			return nil, err
+		}
+		return foundGame.ToGraphModel(), nil
 	}
 
 	var seriesId *string
 
 	if game.Series != nil {
-		series, err := r.AddSeries(ctx, *game.Series)
+		series, err := r.addSeries(ctx, *game.Series)
 		if err != nil {
 			return nil, err
 		}
@@ -128,7 +153,7 @@ func (r *mutationResolver) AddGame(ctx context.Context, game model.GameInput) (*
 
 	var platformIDs []string
 	for _, platformInput := range game.Platforms {
-		platform, err := r.AddPlatform(ctx, *platformInput)
+		platform, err := r.addPlatform(ctx, *platformInput)
 		if err != nil {
 			return nil, err
 		}
@@ -140,13 +165,26 @@ func (r *mutationResolver) AddGame(ctx context.Context, game model.GameInput) (*
 		return nil, err
 	}
 	return newGame.ToGraphModel(), nil
-
 }
 
 // AddAuthor is the resolver for the addAuthor field.
 func (r *mutationResolver) AddAuthor(ctx context.Context, author model.AuthorInput) (*model.Author, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	return r.addAuthor(ctx, author)
+}
+
+func (r *mutationResolver) addAuthor(ctx context.Context, author model.AuthorInput) (*model.Author, error) {
+	if author.ID != nil && author.Name != nil {
+		return nil, fmt.Errorf("cannot specify both ID and name when creating new author")
+	}
 	if author.ID != nil {
-		return nil, fmt.Errorf("cannot create new Author with ID specified")
+		foundAuthor, err := r.database.Author(*author.ID)
+		if err != nil {
+			return nil, err
+		}
+		return foundAuthor.ToGraphModel(), nil
 	}
 
 	return r.database.AddAuthor(*author.Name).ToGraphModel(), nil
@@ -154,11 +192,14 @@ func (r *mutationResolver) AddAuthor(ctx context.Context, author model.AuthorInp
 
 // AddReview is the resolver for the addReview field.
 func (r *mutationResolver) AddReview(ctx context.Context, review model.ReviewInput) (*model.Review, error) {
-	author, err := r.AddAuthor(ctx, *review.Author)
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	author, err := r.addAuthor(ctx, *review.Author)
 	if err != nil {
 		return nil, err
 	}
-	game, err := r.AddGame(ctx, *review.Game)
+	game, err := r.addGame(ctx, *review.Game)
 	if err != nil {
 		return nil, err
 	}
@@ -316,7 +357,7 @@ func (r *Resolver) Author() AuthorResolver { return &authorResolver{r} }
 func (r *Resolver) Game() GameResolver { return &gameResolver{r} }
 
 // Mutation returns MutationResolver implementation.
-func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
+func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{Resolver: r} }
 
 // Platform returns PlatformResolver implementation.
 func (r *Resolver) Platform() PlatformResolver { return &platformResolver{r} }
@@ -332,7 +373,10 @@ func (r *Resolver) Series() SeriesResolver { return &seriesResolver{r} }
 
 type authorResolver struct{ *Resolver }
 type gameResolver struct{ *Resolver }
-type mutationResolver struct{ *Resolver }
+type mutationResolver struct {
+	*Resolver
+	mu sync.Mutex
+}
 type platformResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type reviewResolver struct{ *Resolver }
