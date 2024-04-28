@@ -117,6 +117,10 @@ func (r *mutationResolver) addSeries(ctx context.Context, series model.SeriesInp
 		return foundSeries.ToGraphModel(), nil
 	}
 
+	if series.Name == nil {
+		return nil, fmt.Errorf("series name cannot be nil")
+	}
+
 	// No ID was specified, only the Name. So, create a new Series
 	return r.database.AddSeries(*series.Name).ToGraphModel(), nil
 }
@@ -139,6 +143,10 @@ func (r *mutationResolver) addGame(ctx context.Context, game model.GameInput) (*
 			return nil, err
 		}
 		return foundGame.ToGraphModel(), nil
+	}
+
+	if game.Name == nil {
+		return nil, fmt.Errorf("name cannot be nil")
 	}
 
 	var seriesId *string
@@ -176,8 +184,8 @@ func (r *mutationResolver) AddAuthor(ctx context.Context, author model.AuthorInp
 }
 
 func (r *mutationResolver) addAuthor(ctx context.Context, author model.AuthorInput) (*model.Author, error) {
-	if author.ID != nil && author.Name != nil {
-		return nil, fmt.Errorf("cannot specify both ID and name when creating new author")
+	if (author.ID == nil && author.Name == nil) || (author.ID != nil && author.Name != nil) {
+		return nil, fmt.Errorf("must specify either the ID or the name (exclusive)")
 	}
 	if author.ID != nil {
 		foundAuthor, err := r.database.Author(*author.ID)
@@ -194,6 +202,10 @@ func (r *mutationResolver) addAuthor(ctx context.Context, author model.AuthorInp
 func (r *mutationResolver) AddReview(ctx context.Context, review model.ReviewInput) (*model.Review, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	if review.Author == nil || review.Game == nil {
+		return nil, fmt.Errorf("both Author and Game must not be nil")
+	}
 
 	author, err := r.addAuthor(ctx, *review.Author)
 	if err != nil {
