@@ -92,15 +92,22 @@ func (r *mutationResolver) AddPlatform(ctx context.Context, platform model.Platf
 
 // AddSeries is the resolver for the addSeries field.
 func (r *mutationResolver) AddSeries(ctx context.Context, series model.SeriesInput) (*model.Series, error) {
+	if series.ID != nil && series.Name != nil {
+		return nil, fmt.Errorf("cannot supply both series ID and name for creation")
+	}
+
 	if series.ID != nil {
-		if series.Name != nil {
-			//return nil,
+		// An ID was specified, first try to find it to use the existing one, otherwise error
+		foundSeries, err := r.database.Series(*series.ID)
+		if err != nil {
+			return nil, err
 		}
+		return foundSeries.ToGraphModel(), nil
 	}
-	if series.Name == nil {
-		return nil, fmt.Errorf("series name cannot be nil")
-	}
+
+	// No ID was specified, only the Name. So, create a new Series
 	return r.database.AddSeries(*series.Name).ToGraphModel(), nil
+
 }
 
 // AddGame is the resolver for the addGame field.
@@ -112,48 +119,20 @@ func (r *mutationResolver) AddGame(ctx context.Context, game model.GameInput) (*
 	var seriesId *string
 
 	if game.Series != nil {
-		// A series has been specified, so either find it or create it
-		if game.Series.ID != nil && game.Series.Name != nil {
-			return nil, fmt.Errorf("cannot supply both series ID and name for creation")
+		series, err := r.AddSeries(ctx, *game.Series)
+		if err != nil {
+			return nil, err
 		}
-
-		if game.Series.ID != nil {
-			// An ID was specified, first try to find it to use the existing one, otherwise error
-			foundSeries, err := r.database.Game(*game.Series.ID)
-			if err != nil {
-				return nil, err
-			}
-			seriesId = foundSeries.SeriesID
-		} else {
-			// No ID was specified, only the Name. So, create a new Series and use its ID
-			createdSeriesId := r.database.AddSeries(*game.Series.Name).ID
-			seriesId = &createdSeriesId
-		}
+		seriesId = &series.ID
 	}
 
 	var platformIDs []string
 	for _, platformInput := range game.Platforms {
-		var platformID string
-
-		if platformInput.ID != nil && (platformInput.Name != nil || platformInput.Company != nil) {
-			return nil, fmt.Errorf("cannot supply both platform ID and name or company name")
+		platform, err := r.AddPlatform(ctx, *platformInput)
+		if err != nil {
+			return nil, err
 		}
-
-		if platformInput.ID != nil {
-			// ID supplied, check if it exists otherwise error
-			_, err := r.database.Platform(*platformInput.ID)
-			if err != nil {
-				return nil, err
-			}
-			platformID = *platformInput.ID
-		} else {
-			if platformInput.Name == nil && platformInput.Company == nil {
-				return nil, fmt.Errorf("platform name and company must both be not nil")
-			}
-			platformID = r.database.AddPlatform(*platformInput.Name, *platformInput.Company).ID
-		}
-
-		platformIDs = append(platformIDs, platformID)
+		platformIDs = append(platformIDs, platform.ID)
 	}
 
 	newGame, err := r.database.AddGame(*game.Name, seriesId, platformIDs)
