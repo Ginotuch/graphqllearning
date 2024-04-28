@@ -109,6 +109,9 @@ func (i *InMemoryDatabase) AddPlatform(name string, company string) Platform {
 }
 
 func (i *InMemoryDatabase) Games() []Game {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	var games []Game
 	for _, game := range i.games {
 		games = append(games, game)
@@ -117,6 +120,9 @@ func (i *InMemoryDatabase) Games() []Game {
 }
 
 func (i *InMemoryDatabase) SeriesList() []Series {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	var seriesList []Series
 	for _, series := range i.series {
 		seriesList = append(seriesList, series)
@@ -125,6 +131,9 @@ func (i *InMemoryDatabase) SeriesList() []Series {
 }
 
 func (i *InMemoryDatabase) Reviews() []Review {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	var reviews []Review
 	for _, review := range i.reviews {
 		reviews = append(reviews, review)
@@ -133,6 +142,9 @@ func (i *InMemoryDatabase) Reviews() []Review {
 }
 
 func (i *InMemoryDatabase) Authors() []Author {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	var authors []Author
 	for _, author := range i.authors {
 		authors = append(authors, author)
@@ -141,6 +153,9 @@ func (i *InMemoryDatabase) Authors() []Author {
 }
 
 func (i *InMemoryDatabase) Platforms() []Platform {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	var platforms []Platform
 	for _, platform := range i.platforms {
 		platforms = append(platforms, platform)
@@ -149,6 +164,9 @@ func (i *InMemoryDatabase) Platforms() []Platform {
 }
 
 func (i *InMemoryDatabase) Game(id string) (*Game, error) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	game, exists := i.games[id]
 	if !exists {
 		return nil, fmt.Errorf("game with ID %s not found", id)
@@ -157,6 +175,9 @@ func (i *InMemoryDatabase) Game(id string) (*Game, error) {
 }
 
 func (i *InMemoryDatabase) Series(id string) (*Series, error) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	series, exists := i.series[id]
 	if !exists {
 		return nil, fmt.Errorf("series with ID %s not found", id)
@@ -165,6 +186,9 @@ func (i *InMemoryDatabase) Series(id string) (*Series, error) {
 }
 
 func (i *InMemoryDatabase) Review(id string) (*Review, error) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	review, exists := i.reviews[id]
 	if !exists {
 		return nil, fmt.Errorf("review with ID %s not found", id)
@@ -173,6 +197,9 @@ func (i *InMemoryDatabase) Review(id string) (*Review, error) {
 }
 
 func (i *InMemoryDatabase) Author(id string) (*Author, error) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	author, exists := i.authors[id]
 	if !exists {
 		return nil, fmt.Errorf("author with ID %s not found", id)
@@ -181,6 +208,9 @@ func (i *InMemoryDatabase) Author(id string) (*Author, error) {
 }
 
 func (i *InMemoryDatabase) Platform(id string) (*Platform, error) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	platform, exists := i.platforms[id]
 	if !exists {
 		return nil, fmt.Errorf("platform with ID %s not found", id)
