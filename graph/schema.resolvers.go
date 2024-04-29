@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"graphqllearning/graph/model"
-	"sync"
 )
 
 // Reviews is the resolver for the reviews field.
@@ -327,6 +326,9 @@ func (r *queryResolver) Platform(ctx context.Context, id string) (*model.Platfor
 
 // Author is the resolver for the author field.
 func (r *reviewResolver) Author(ctx context.Context, obj *model.Review) (*model.Author, error) {
+	r.mu.RLock()
+	defer r.mu.Unlock()
+
 	review, err := r.database.Review(obj.ID)
 	if err != nil {
 		return nil, err
@@ -340,6 +342,9 @@ func (r *reviewResolver) Author(ctx context.Context, obj *model.Review) (*model.
 
 // Game is the resolver for the game field.
 func (r *reviewResolver) Game(ctx context.Context, obj *model.Review) (*model.Game, error) {
+	r.mu.RLock()
+	defer r.mu.Unlock()
+
 	review, err := r.database.Review(obj.ID)
 	if err != nil {
 		return nil, err
@@ -385,10 +390,7 @@ func (r *Resolver) Series() SeriesResolver { return &seriesResolver{r} }
 
 type authorResolver struct{ *Resolver }
 type gameResolver struct{ *Resolver }
-type mutationResolver struct {
-	*Resolver
-	mu sync.Mutex
-}
+type mutationResolver struct{ *Resolver }
 type platformResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type reviewResolver struct{ *Resolver }

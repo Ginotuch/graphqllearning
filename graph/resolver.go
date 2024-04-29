@@ -1,6 +1,9 @@
 package graph
 
-import "graphqllearning/graph/storage"
+import (
+	"graphqllearning/graph/storage"
+	"sync"
+)
 
 // This file will not be regenerated automatically.
 //
@@ -8,6 +11,7 @@ import "graphqllearning/graph/storage"
 
 type Resolver struct {
 	database storage.Database
+	mu       sync.RWMutex
 }
 
 func NewResolver(database storage.Database) *Resolver {
